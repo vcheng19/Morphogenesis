@@ -180,6 +180,11 @@ for i = 1:row-1
     imshow(current);
 end
 
+global store;
+store(:,:,1) = store(:,:,2);
+store(:,:,2) = store(:,:,3);
+store(:,:,3) = store(:,:,4);
+store(:,:,4) = current;
 %global store;
 %store(:,:,1) = store(:,:,2);
 %store(:,:,2) = store(:,:,3);
