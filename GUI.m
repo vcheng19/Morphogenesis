@@ -22,7 +22,7 @@ function varargout = GUI(varargin)
 
 % Edit the above text to modify the response to help GUI
 
-% Last Modified by GUIDE v2.5 02-Jun-2016 15:39:14
+% Last Modified by GUIDE v2.5 03-Jun-2016 14:43:15
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -60,7 +60,7 @@ guidata(hObject, handles);
 % UIWAIT makes GUI wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 set(handles.thresh_slide,'Value',0.5);
-
+imshow(zeros(150));
 
 % --- Outputs from this function are returned to the command line.
 function varargout = GUI_OutputFcn(hObject, eventdata, handles) 
@@ -102,8 +102,10 @@ function pb_load_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global img;
+global TIFF;
 [filename, pathname] = uigetfile({'*.tif';'*.*'}, 'Pick an Image File');
-img=imread([pathname,filename]);
+img = imread([pathname,filename]);
+TIFF = loadtiff([pathname,filename]);
 set(handles.edit1,'String',[pathname,filename]);
 axes(handles.img_display);
 imshow(img);
@@ -126,7 +128,7 @@ if isempty(thresh_level)
 else
     A = im2bw(img_new, thresh_level);
 end
-A = imclose(A,strel('disk',3));
+A = imclose(A,strel('disk',1));
 B = bwmorph(A,'thin','Inf');
 imshow(B);
 %colormap([1 1 1; 0 0 1])
@@ -195,103 +197,6 @@ function save_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 imsave;
 
-
-% --- Executes on button press in delete_region.
-function delete_region_Callback(hObject, eventdata, handles)
-% hObject    handle to delete_region (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global B;
-global junk;
-global current;
-%mycoords = ginput(1);
-%X = round(mycoords(1)), Y = round(mycoords(2))
-rect = getrect
-Xmin = round(rect(1)); Xmax = Xmin + round(rect(3));
-Ymin = round(rect(2)); Ymax = Ymin + round(rect(4));
-X = Xmin:Xmax; Y = Ymin:Ymax;
-for m = 1:length(X)
-    for n = 1:length(Y)
-        B(Y(n),X(m)) = 0;
-    end
-end
-%B(Y,X) = 0;
-overlay_button_Callback(handles.overlay_button,eventdata,handles);
-pull_down_Callback(handles.pull_down, eventdata, handles)
-imshow(current);
-delete_region_Callback(handles.delete_region, eventdata, handles);
-
-
-% --- Executes on button press in interp_button.
-function interp_button_Callback(hObject, eventdata, handles)
-% hObject    handle to interp_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-% [X,Y] = ginputc('Color', 'r', 'LineWidth', 3);
-% %interpolate = interp1(Y',X',linspace(min(Y),max(Y),20));
-% hold on
-% %plot(interpolate, linspace(min(Y),max(Y),20), '-r')
-% H = plot(X',Y','-w')
-% assignin('base','H',H)
-
-global B;
-global junk;
-global current;
-%imshow(B);
-disp('helloo');
-[xinp, yinp] = ginputc('Color', 'r', 'LineWidth', 1);
-temp2 = size(xinp);
-row = temp2(1);
-    if row == 1
-       xx = round(xinp(1));
-       yy = round(yinp(1));
-       B(xx, yy) = 1;
-       imshow(B);
-       %disp(B(y1,j))
-       return;
-    end
-for i = 1:row-1
-    first = round([xinp(i), yinp(i)]);
-    second = round([xinp(i+1), yinp(i+1)]);
-    deltax = second(1) - first(1);
-    deltay = second(2) - first(2);
-    slope = deltay/deltax;
-    x0 = first(1);
-    y0 = first(2);
-    y = @(x) y0 + slope*(x - x0);
-    x = @(y) (y-y0)/slope + x0;
-    if abs(deltax) > abs(deltay)
-        if x0 < second(1)
-            for j = x0:second(1)
-                y1 = round(y(j));
-                B(y1,j) = 1;
-            end
-        else
-            for j = second(1):x0
-                y1 = round(y(j));
-                B(y1,j) = 1;
-            end
-        end
-    else
-        if y0 < second(2)
-            for j = y0:second(2)
-                x1 = round(x(j));
-                B(j, x1) = 1;
-            end
-        else
-            for j = second(2):y0
-                x1 = round(x(j));
-                B(j, x1) = 1;
-            end
-        end
-        
-    end
-    overlay_button_Callback(handles.overlay_button,eventdata,handles);
-    pull_down_Callback(handles.pull_down, eventdata, handles)
-    imshow(current);
-end
-
-
 % --- Executes on button press in overlay_button.
 function overlay_button_Callback(hObject, eventdata, handles)
 % hObject    handle to overlay_button (see GCBO)
@@ -346,3 +251,13 @@ function pull_down_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+% --- Executes on button press in se    nd_button.
+function send_button_Callback(hObject, eventdata, handles)
+% hObject    handle to send_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global B;
+imwrite(B,'myGTRough.png');
+closereq;
+SubGUI;
