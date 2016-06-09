@@ -22,7 +22,7 @@ function varargout = GUI(varargin)
 
 % Edit the above text to modify the response to help GUI
 
-% Last Modified by GUIDE v2.5 03-Jun-2016 14:43:15
+% Last Modified by GUIDE v2.5 03-Jun-2016 15:38:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -61,6 +61,7 @@ guidata(hObject, handles);
 % uiwait(handles.figure1);
 set(handles.thresh_slide,'Value',0.5);
 imshow(zeros(150));
+%setup;
 
 % --- Outputs from this function are returned to the command line.
 function varargout = GUI_OutputFcn(hObject, eventdata, handles) 
@@ -212,7 +213,7 @@ sizee = size(B);
 for r = 1:sizee(1)
     for c = 1:sizee(2)
         if B(r,c) == 1
-            junk(r,c,:) = [1,0,0];
+            junk(r,c,:) = [0,0,1];
         end
     end
 end
@@ -252,7 +253,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-% --- Executes on button press in se    nd_button.
+% --- Executes on button press in send_button.
 function send_button_Callback(hObject, eventdata, handles)
 % hObject    handle to send_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB

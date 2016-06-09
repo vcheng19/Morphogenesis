@@ -27,11 +27,11 @@ function varargout = SubGUI(varargin)
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @SubGUI_OpeningFcn, ...
-                   'gui_OutputFcn',  @SubGUI_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+    'gui_Singleton',  gui_Singleton, ...
+    'gui_OpeningFcn', @SubGUI_OpeningFcn, ...
+    'gui_OutputFcn',  @SubGUI_OutputFcn, ...
+    'gui_LayoutFcn',  [] , ...
+    'gui_Callback',   []);
 if nargin && ischar(varargin{1})
     gui_State.gui_Callback = str2func(varargin{1});
 end
@@ -77,7 +77,7 @@ store(:,:,4)=B;
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = SubGUI_OutputFcn(hObject, eventdata, handles) 
+function varargout = SubGUI_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -106,7 +106,7 @@ for m = 1:length(X)
         B(Y(n),X(m)) = 0;
     end
 end
-%B(Y,X) = 0;
+
 overlay_Callback(handles.overlay,eventdata,handles);
 pull_down_Callback(handles.pull_down, eventdata, handles)
 imshow(current);
@@ -115,7 +115,7 @@ global store;
 store(:,:,1) = store(:,:,2);
 store(:,:,2) = store(:,:,3);
 store(:,:,3) = store(:,:,4);
-store(:,:,4) = current;
+store(:,:,4) = B;
 
 
 delete_button_Callback(handles.delete_button, eventdata, handles);
@@ -132,13 +132,13 @@ global current;
 [xinp, yinp] = ginputc('Color', 'r', 'LineWidth', 1);
 temp2 = size(xinp);
 row = temp2(1);
-    if row == 1
-       xx = round(xinp(1));
-       yy = round(yinp(1));
-       B(xx, yy) = 1;
-       imshow(B);
-       return;
-    end
+if row == 1
+    xx = round(xinp(1));
+    yy = round(yinp(1));
+    B(xx, yy) = 1;
+    imshow(B);
+    return;
+end
 for i = 1:row-1
     first = round([xinp(i), yinp(i)]);
     second = round([xinp(i+1), yinp(i+1)]);
@@ -185,11 +185,7 @@ store(:,:,1) = store(:,:,2);
 store(:,:,2) = store(:,:,3);
 store(:,:,3) = store(:,:,4);
 store(:,:,4) = current;
-%global store;
-%store(:,:,1) = store(:,:,2);
-%store(:,:,2) = store(:,:,3);
-%store(:,:,3) = store(:,:,4);
-%store(:,:,4) = B;
+
 
 
 % --- Executes on button press in send_button.
@@ -254,7 +250,7 @@ sizee = size(B);
 for r = 1:sizee(1)
     for c = 1:sizee(2)
         if B(r,c) == 1
-            junk(r,c,:) = [1,0,0];
+            junk(r,c,:) = [0,0,1];
         end
     end
 end
@@ -267,18 +263,20 @@ function undo_but_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global current;
+global B;
 global store;
+global junk;
 
-current = store(:,:,3);
-store(:,:,4) = store(:,:,3);
-store(:,:,3) = store(:,:,2);
-store(:,:,2) = store(:,:,1);
-
-[m,n] = size(current);
-store(:,:,1) = zeros(m,n);
-
-if current==zeros(m,n)
+[m,n] = size(B);
+if store(:,:,3)==zeros(m,n)
     set(handles.text2,'string','Can''t undo any more');
 else
-imshow(current);
+    B = store(:,:,3);
+    store(:,:,4) = store(:,:,3);
+    store(:,:,3) = store(:,:,2);
+    store(:,:,2) = store(:,:,1);
+    store(:,:,1) = zeros(m,n);
+    overlay_Callback(handles.overlay,eventdata,handles);
+    pull_down_Callback(handles.pull_down, eventdata, handles);
+    imshow(current);
 end
