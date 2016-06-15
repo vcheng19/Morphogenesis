@@ -22,7 +22,7 @@ function varargout = SubGUI(varargin)
 
 % Edit the above text to modify the response to help SubGUI
 
-% Last Modified by GUIDE v2.5 03-Jun-2016 15:24:19
+% Last Modified by GUIDE v2.5 13-Jun-2016 10:22:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -66,14 +66,14 @@ global B;
 B = imread('myGTRough.png');
 imshow(B)
 
-global store;
-[m,n] = size(B);
-store = zeros(m,n,4);
-store(:,:,1)=B;
-store(:,:,2)=B;
-store(:,:,3)=B;
-store(:,:,4)=B;
+global historyNum;
+historyNum = 4; %don't change this variable elsewhere
 
+global store;
+store = repmat(B,1,1,historyNum);
+
+global iter;
+iter = 1;
 
 
 % --- Outputs from this function are returned to the command line.
@@ -112,11 +112,16 @@ pull_down_Callback(handles.pull_down, eventdata, handles)
 imshow(current);
 
 global store;
-store(:,:,1) = store(:,:,2);
-store(:,:,2) = store(:,:,3);
-store(:,:,3) = store(:,:,4);
-store(:,:,4) = B;
+global iter;
+global historyNum;
 
+if iter== historyNum
+    iter = 1;
+else
+    iter = iter+1;
+end
+
+store(:,:,iter) = B;
 
 delete_button_Callback(handles.delete_button, eventdata, handles);
 
@@ -129,7 +134,7 @@ function interp_button_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global B;
 global current;
-[xinp, yinp] = ginputc('Color', 'r', 'LineWidth', 1);
+[xinp, yinp] = ginput_custom;
 temp2 = size(xinp);
 row = temp2(1);
 if row == 1
@@ -145,10 +150,9 @@ for i = 1:row-1
     deltax = second(1) - first(1);
     deltay = second(2) - first(2);
     slope = deltay/deltax;
-    x0 = first(1);
-    y0 = first(2);
-    y = @(x) y0 + slope*(x - x0);
-    x = @(y) (y-y0)/slope + x0;
+    x0 = first(1); y0 = first(2);
+    y = @(x) y0 + slope*(x - x0); 
+    x = @(y) (y-y0)/slope + x0; % Define fns
     if abs(deltax) > abs(deltay)
         if x0 < second(1)
             for j = x0:second(1)
@@ -181,12 +185,16 @@ for i = 1:row-1
 end
 
 global store;
-store(:,:,1) = store(:,:,2);
-store(:,:,2) = store(:,:,3);
-store(:,:,3) = store(:,:,4);
-store(:,:,4) = current;
+global iter;
+global historyNum;
 
+if iter== historyNum
+    iter = 1;
+else
+    iter = iter+1;
+end
 
+store(:,:,iter) = B;
 
 % --- Executes on button press in send_button.
 function send_button_Callback(hObject, eventdata, handles)
@@ -194,10 +202,13 @@ function send_button_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global B;
-global TIFF;
-imwrite(B,'myGT.png')
+global TIFF; global frame_range;
+imwrite(B,'myGT.png');
 assignin('base','TIFF',TIFF);
-setup;
+frame_range = str2double(get(handles.start_frame,'String')): ...
+    str2double(get(handles.end_frame,'String'));
+closereq;
+Displayer;
 RUNME;
 fprintf('Done with segmentation!\n')
 
@@ -209,16 +220,17 @@ function pull_down_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns pull_down contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from pull_down
-global B;
-global junk;
-global current;
+global B; global junk; global current; global img;
 str = get(hObject, 'String');
 val = get(hObject, 'Value');
 switch str{val}
     case 'Binary'
         current = B;
     case 'Overlay'
+        overlay_Callback(handles.overlay,eventdata,handles)
         current = junk;
+    case 'Raw'
+        current = img;
 end
 imshow(current);
 
@@ -265,18 +277,84 @@ function undo_but_Callback(hObject, eventdata, handles)
 global current;
 global B;
 global store;
-global junk;
+global historyNum;
+global iter;
 
 [m,n] = size(B);
-if store(:,:,3)==zeros(m,n)
+
+if iter == 1
+    tmp = historyNum;
+else
+    tmp = iter-1;
+end
+
+if store(:,:,tmp)==zeros(m,n)
     set(handles.text2,'string','Can''t undo any more');
 else
-    B = store(:,:,3);
-    store(:,:,4) = store(:,:,3);
-    store(:,:,3) = store(:,:,2);
-    store(:,:,2) = store(:,:,1);
-    store(:,:,1) = zeros(m,n);
-    overlay_Callback(handles.overlay,eventdata,handles);
-    pull_down_Callback(handles.pull_down, eventdata, handles);
-    imshow(current);
+    B = store(:,:,tmp);
+    store(:,:,iter) = zeros(m,n);
+    iter = tmp;
+
+overlay_Callback(handles.overlay,eventdata,handles);
+pull_down_Callback(handles.pull_down, eventdata, handles);
+imshow(current);
 end
+
+
+
+function end_frame_Callback(hObject, eventdata, handles)
+% hObject    handle to end_frame (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of end_frame as text
+%        str2double(get(hObject,'String')) returns contents of end_frame as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function end_frame_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to end_frame (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function start_frame_Callback(hObject, eventdata, handles)
+% hObject    handle to start_frame (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of start_frame as text
+%        str2double(get(hObject,'String')) returns contents of start_frame as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function start_frame_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to start_frame (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in region_select.
+function region_select_Callback(hObject, eventdata, handles)
+% hObject    handle to region_select (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global minX; global maxX; global minY; global maxY; global junk;
+imshow(junk);
+rect = getrect;
+minX = round(rect(1)); minY = round(rect(2));
+maxX = round(rect(1)+rect(3)); maxY = round(rect(2)+rect(4));
+rectangle('Position',rect,'EdgeColor','r','LineWidth',3)

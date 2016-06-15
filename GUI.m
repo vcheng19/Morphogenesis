@@ -22,7 +22,7 @@ function varargout = GUI(varargin)
 
 % Edit the above text to modify the response to help GUI
 
-% Last Modified by GUIDE v2.5 03-Jun-2016 15:38:47
+% Last Modified by GUIDE v2.5 10-Jun-2016 13:54:38
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -61,7 +61,7 @@ guidata(hObject, handles);
 % uiwait(handles.figure1);
 set(handles.thresh_slide,'Value',0.5);
 imshow(zeros(150));
-%setup;
+setup;
 
 % --- Outputs from this function are returned to the command line.
 function varargout = GUI_OutputFcn(hObject, eventdata, handles) 
@@ -121,19 +121,11 @@ function segment_button_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global img;
 global B;
-thresh_slide = get(handles.thresh_slide, 'Value');
-thresh_level = str2num(get(handles.thresh_level, 'Str'));
-img_new = imadjust(imadjust(imadjust(img)));
-if isempty(thresh_level)
-    A = im2bw(img_new, thresh_slide);
-else
-    A = im2bw(img_new, thresh_level);
-end
-A = imclose(A,strel('disk',1));
-B = bwmorph(A,'thin','Inf');
-imshow(B);
-%colormap([1 1 1; 0 0 1])
 
+hminima = get(handles.thresh_slide, 'Value') .* 50;                                                 % the h parameter for matlab's imhmin function optimized to this data set                                                 % SEG holds the segmentations of image stack
+L = watershed(imhmin(medfilt2(img,[3,3]), hminima));          % watershed segmentation on each frame (after light median filtering for noise removal)
+B = imreadgroundtruth(L==0, true);                            % convert segmentation to ground truth format
+imshow(B);
 
 % --- Executes on slider movement.
 function thresh_slide_Callback(hObject, eventdata, handles)
@@ -158,29 +150,6 @@ function thresh_slide_CreateFcn(hObject, eventdata, handles)
 % Hint: slider controls usually have a light gray background.
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
-end
-
-
-
-function thresh_level_Callback(hObject, eventdata, handles)
-% hObject    handle to thresh_level (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of thresh_level as text
-%        str2double(get(hObject,'String')) returns contents of thresh_level as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function thresh_level_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to thresh_level (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
 end
 
 
@@ -217,7 +186,7 @@ for r = 1:sizee(1)
         end
     end
 end
-imshow(current);
+%imshow(current);
 
 
 % --- Executes on selection change in pull_down.
@@ -228,16 +197,17 @@ function pull_down_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns pull_down contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from pull_down
-global current;
-global B;
-global junk;
+global current; global B; global junk; global img;
 str = get(hObject, 'String');
 val = get(hObject, 'Value');
 switch str{val}
     case 'Binary'
         current = B;
     case 'Overlay'
+        overlay_button_Callback(handles.overlay_button,eventdata,handles)
         current = junk;
+    case 'Raw'
+        current = img;
 end
 imshow(current);
 
